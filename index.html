@@ -1,0 +1,161 @@
+<!--	tayralist (Music Player)
+
+		HTML/CSS/JQUERY
+		
+		The Music Player is a simple widget that uses HTML5's audio features and JQuery.
+		The HTML5 audio provides the core function while the the playlist is built with javascript.-->
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>tayralist</title>
+		<link rel="stylesheet" type="text/css" href="css/sheet.css" />			<!-- links the external cascading style sheet -->
+		<script src="jquery-1.12.3.min.js" type="text/javascript"></script>		<!-- links the external jquery script -->
+	</head>
+	
+	<body>
+		<div id="title">
+			<h1>musicplayer</h1>
+		</div>
+
+		<div id="audioplayer">
+		<!-- The audioplayer has three parts:
+					1. audiocontrols			This contains the audio tag which plays the music
+					2. header					This displays the playing track's information
+					3. playlist					The playlist										-->
+					
+			<div id="audiocontrols">
+			<!-- PART 1 : audiocontrols -->
+				<audio id="audio" controls="controls">
+				<!-- The audio tag is an HTML5 feature -->
+					Your browser doesn't support HTML5 audio tags.
+				</audio>
+				<noscript>
+				<!--	The noscript tag checks for javascript support. The code inside the tag is executed if javascript is disabled. -->
+					<style>
+					<!--	This bit of css disables the playlist and hides it from view. -->
+						#playlist {display : none; visibility : hidden;}
+					</style>
+					Javascript is disabled or not supported.
+				</noscript>
+			</div>
+			
+			<div class="header">
+			<!--	PART 2 : header
+					The header displays the info about the currently playing track.
+					headerNum shows the track number from the list.
+					headerTitle shows the name of the track.
+					headerLength shows the length in mm:ss format. -->
+				<div id="headerNum">#</div>
+				<div id="headerTitle">Title</div>
+				<div id="headerLength">Length</div>
+			</div>
+			
+			<div id="playlist" class="audio">
+			<!-- 	PART 3 : playlist
+					This is a placeholder for the playlist. This div is procedurally filled with a table. -->
+			</div>
+		
+			<!-----------------------Music Playlist Script--------------------------->
+			
+			<script type="text/javascript">
+				$(document).ready(function() {
+					var supportsAudio = !!document.createElement('audio').canPlayType;	// checks for audio support (here !! operator is used for boolean type casting)
+					if(supportsAudio) {
+						// The playlist is stored as a JSON array.
+						tracks = [
+							{	"track" : 1,		"name" : "Topher Mohr and Alex Elena - Stalling"},
+							{	"track" : 2,		"name" : "Incomptech - 8bit Dungeon Boss"},
+							{	"track" : 3,		"name" : "Incompetech - Isolated"},
+							{	"track" : 4,		"name" : "Topher Mohr and Alex Elena - Garage"},
+							{	"track" : 5,		"name" : "Bob Dylan - Knocking On Heaven's Door"}
+						];
+						var trackNum = 0;						// The currently playing/loaded track number
+						var trackLength;						// Duration of current track
+						trackCount = tracks.length;				// The size of the 'tracks' array
+						headerNum = $('#headerNum');			// div with id plHeadNum is stored as object
+						headerLength = $('#headerLength');
+						headerTitle = $('#headerTitle');
+						
+						// The playlist is displayed in the form of a borderless table.
+						// There are three data blocks in each row: plNum (Track Number), plTitle (Title), plLength (Track Length).
+						// The data is obtained from the 'tracks' array.
+						// playlistCode contains the html code for the tabular playlist as a string.
+						// The code is parsed as html using JQuery's html() method.
+						var playlistCode;
+						playlistCode = "<table id='playlistTable' border='0' width='100%'>";
+						for(var i = 0; i < trackCount; i++) {
+							playlistCode += "<tr>"
+												+		"<td class='plNum'>" + tracks[i].track + "</td>"
+												+		"<td class='plTitle'>" + tracks[i].name + "</td>"
+												<!-- +		"<td class=\"plLength\">" + trackLength + "</td>" -->
+												+  "</tr>";
+						}
+						playlistCode += "</table>";
+						$('#playlist').html($('#playlist').html() + playlistCode); // append the table to the html document
+						
+						// JQuery provides us with event handling features.
+						// The audioplayer's 'ended' event is bound with a function that loads the next track
+						// when the current track has finished.
+						audio = $('#audio').bind('ended', function() {
+															if((trackNum + 1) < trackCount) {
+																trackNum++;
+																loadTrack(trackNum);
+																audio.play();
+															} else {
+																audio.pause();
+																trackNum = 0;
+																loadTrack(trackNum);
+															}
+														})
+														.bind('loadedmetadata', function() {
+															updateLength();
+														})
+														.get(0);
+																			
+						// When a row in the playlist table is clicked on, the following function is executed.
+						// It obtains the index of the clicked row and puts it in 'id'.
+						// The 'id' is checked with the currently playing track number and
+						// if they are unequal, the id's track is played.
+						$('#playlist tr').click(function() {
+														var id = parseInt($(this).index());
+														if(id !== trackNum) {
+															playTrack(id);
+														}
+													});
+																		
+						// This function updates the info in the playlistHeader to the current track.
+						// It also sets the source file for the audioplayer.
+						// When a table row is selected/clicked, the 'selectedTrack' class attribute is added to it. The allows us to keep track of the playlist.
+						// The function ONLY loads the track without playing it.
+						loadTrack = function(id) {
+							$('.selectedTrack').css("font-weight","normal").removeClass('selectedTrack');
+							$('#playlist tr:eq(' + id + ')').addClass('selectedTrack');
+							$('.selectedTrack').css("font-weight","bold");
+							$('#headerNum').html("Track# &emsp;&emsp;&emsp;" + tracks[id].track);
+							$('#headerTitle').html("Title &emsp;&emsp;&emsp;&emsp;" + tracks[id].name);
+							trackNum = id;
+							audio.src = "music/" + tracks[id].name + ".mp3";
+						};
+						
+						// The updateLength function tries to load the track duration 'dynamically'
+						updateLength = function(id) {
+							trackLength = audio.duration;
+							min	=	("0" + (parseInt(trackLength / 60) % 60)).slice(-2);
+							sec	=	("0" + parseInt(trackLength % 60)).slice(-2);
+							trackLength = min + ":" + sec;
+							$('#headerLength').html("Length &emsp;&emsp;&emsp;" + trackLength);
+						};
+						
+						playTrack = function(id) {
+							loadTrack(id);	// Loads the track
+							audio.play();		// Starts playing the track
+						};
+						
+						loadTrack(0);	// Initializes the player
+					}
+				});
+			</script>
+		</div>	<!-- audioplayer div -->
+	</body>
+</html>
